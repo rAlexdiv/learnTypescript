@@ -100,6 +100,6 @@ export const entriesModule = new Elysia({ prefix: '/api' })
     detail: {
       tags: ['Entries'],
       summary: 'Получить список записей с пагинацией',
-      description: 'Возвращает последние 10 записей и общее количество'
+      description: 'Возвращает последние 10 записей и общее количество для пагинации'
     }
   });
