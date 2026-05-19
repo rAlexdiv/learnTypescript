@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.ts';
+import { formatEntry, type RawEntry } from '../utils/formatEntry.ts';
 
 const CategorySchema = t.Object({
   fullname: t.String(),
@@ -9,7 +10,7 @@ const CategorySchema = t.Object({
 const EntrySchema = t.Object({
   entryid: t.Number(),
   subject: t.String(),
-  content_p: t.String(),
+  content: t.String(),
   catid: t.Number(),
   intime: t.String(),
   comments: t.String(),
@@ -17,21 +18,19 @@ const EntrySchema = t.Object({
   image: t.Number(),
   keywordcache: t.String(),
   urlcache: t.String(),
-  category: t.Array(CategorySchema),
-});
-
-const toPlainEntry = (row: Record<string, unknown>) => ({
-    entryid: Number(row.entryid ?? 0),
-    subject: String(row.subject ?? ''),
-    content_p: String(row.content_p ?? ''),
-    catid: Number(row.catid ?? 0),
-    intime: String(row.intime ?? ''),
-    comments: String(row.comments ?? ''),
-    commentcount: Number(row.commentcount ?? 0),
-    image: Number(row.image ?? 0),
-    keywordcache: String(row.keywordcache ?? ''),
-    urlcache: String(row.urlcache ?? ''),
-    category: row.category as { fullname: string; name: string }[],
+  category: CategorySchema,
+  keywords: t.Array(t.Object({ 
+    word: t.String(), 
+    unixword: t.String() 
+  })),
+  dateComponents: t.Object({ 
+    year: t.Optional(t.Number()), 
+    month: t.String(), 
+    day: t.String() 
+  }),
+  breadcrumbsTitle: t.Object({ 
+    title: t.String() 
+  }),
 });
 
 export const entriesModule = new Elysia({ prefix: '/api' })
@@ -56,33 +55,22 @@ export const entriesModule = new Elysia({ prefix: '/api' })
             e.keywordcache,
             e.urlcache,
             COALESCE(
-              json_agg(
-                json_build_object(
-                  'fullname', COALESCE(c.fullname, ''), 
-                  'name', COALESCE(c.name, '')
-                )
-              ) FILTER (WHERE c.catid IS NOT NULL),
-              '[]'::json
-            ) as category
+            json_build_object(
+              'fullname', COALESCE(c.fullname, ''),
+              'name', COALESCE(c.name, '')
+            ),
+            '{}'::json
+          ) as category
           FROM int_entry e
           LEFT JOIN int_category c ON e.catid = c.catid
-          GROUP BY
-            e.entryid,
-            e.subject,
-            e.content_p,
-            e.catid,
-            e.intime,
-            e.comments,
-            e.commentcount,
-            e.image,
-            e.keywordcache,
-            e.urlcache
           ORDER BY e.intime DESC
           LIMIT ${limit} OFFSET ${offset}
       `]);
 
       const total = Number(totalResult[0]?.count ?? 0);
-      const cleanEntries = entries.map(toPlainEntry);
+      const cleanEntries = entries.map(entry => 
+        formatEntry(entry as RawEntry, true)
+      ) as Array<typeof EntrySchema.static>;
 
       // Elysia сама сериализует объект в JSON + добавит Content-Type
       return { 
@@ -93,7 +81,6 @@ export const entriesModule = new Elysia({ prefix: '/api' })
       };
     } catch (err) {
       console.error('DB Error in /api/entries:', err);
-      // Бросаем ошибку — она перехватится глобальным onError в index.ts
       throw new Error('Ошибка запроса к базе данных');
     }
   } , {
