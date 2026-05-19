@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { db } from '../db/index.ts';
+import { entriesSelect } from '../db/entries-select.ts';
 import { formatEntry, type RawEntry } from '../utils/formatEntry.ts';
 
 const CategorySchema = t.Object({
@@ -70,26 +71,7 @@ export const entryModule = new Elysia({ prefix: '/api' })
 
       // Загрузить полную запись по найденному entryid
       const [entry] = await db`
-        SELECT 
-          e.entryid, 
-          e.subject, 
-          e.content_p, 
-          e.catid, 
-          e.intime,
-          e.comments, 
-          e.commentcount, 
-          e.image, 
-          e.keywordcache, 
-          e.urlcache,
-          COALESCE(
-            json_build_object(
-              'fullname', COALESCE(c.fullname, ''),
-              'name', COALESCE(c.name, '')
-            ),
-            '{}'::json
-          ) as category
-        FROM int_entry e
-        LEFT JOIN int_category c ON e.catid = c.catid
+        ${entriesSelect}
         WHERE e.entryid = ${found.entryid}
       `;
 
