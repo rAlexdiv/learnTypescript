@@ -6,7 +6,7 @@ const fetchEntry = (id: number): Promise<{ id: number, title: string }> => {
       } else {
         reject(new Error('Запись не найдена'));
       }
-    }, 1200);
+    }, 5000);
   });
 };
 
@@ -16,13 +16,15 @@ const timeout = (ms: number, message: string): Promise<never> => {
   });
 };
 
-const loadEntry = async (id: number, timeoutMs = 2000): Promise<string> => {
 
+const loadEntry = async (id: number, timeoutMs = 7000): Promise<string> => {
+
+  console.log('Загрузка...');
 
   try {
     const entry = await Promise.race([
       fetchEntry(id),
-      timeout(timeoutMs, '🕘 Таймаут запроса')
+      timeout(timeoutMs, '🕘 Таймаут запроса'),
     ]);
     return `✅ Загружена: ${entry.title}`;
   } catch (err) {
@@ -32,16 +34,16 @@ const loadEntry = async (id: number, timeoutMs = 2000): Promise<string> => {
 };
 
 const main = async () => {
-  console.log('Тест 1: быстрый ответ (таймаут 3 сек, БД 1.2 сек)');
-  console.log(await loadEntry(1474, 3000)); 
+  console.log('Тест 1: быстрый ответ БД (таймаут 7,5 сек, БД 5 сек)');
+  console.log(await loadEntry(1474, 7500)); 
   // ✅ Загружена: Запись #1474
 
   console.log('\nТест 2: ошибка БД (таймаут не сработает)');
-  console.log(await loadEntry(-1, 3000));   
+  console.log(await loadEntry(-1, 7500));   
   // ❌ Ошибка: Запись не найдена
 
-  console.log('\nТест 3: таймаут сработает (таймаут 0.5 сек, БД 1.2 сек)');
-  console.log(await loadEntry(1474, 500));  
+  console.log('\nТест 3: таймаут сработает (таймаут 3 сек, БД 5 сек)');
+  console.log(await loadEntry(1474, 3000));  
   // ❌ Ошибка: Таймаут запроса
 };
 
