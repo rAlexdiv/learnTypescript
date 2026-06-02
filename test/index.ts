@@ -1,12 +1,14 @@
 import { Elysia } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
 import { helloModule } from './modules/hello.ts';
-import { entriesModule } from './modules/entries.ts'
+import { entriesModule } from './modules/entries.ts';
+import { entriesArchiveModules } from './modules/archive.ts';
 
 const app = new Elysia()
   .use(swagger({ path: '/docs' }))
   .use(helloModule)
   .use(entriesModule)
+  .use(entriesArchiveModules)
   .onError(({ code, error, set }) => {
     if (code === 'NOT_FOUND') {
       set.status = 404;

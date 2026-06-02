@@ -51,7 +51,7 @@ export const entriesModule = new Elysia({ prefix: '/api' })
     }),
     detail: {
       tags: ['Entries'],
-      summary: 'Получить список записей с пагинацией по страницам',
-      description: 'Принимает ?page=2&limit=10, автоматически считает OFFSET',
+      summary: 'Получить все записи',
+      description: 'Принимает ?page=1&limit=10. Возвращает все записи, с пагинацией',
     }
   });
