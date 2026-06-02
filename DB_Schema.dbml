@@ -1,0 +1,115 @@
+// Site Database Schema (PostgreSQL)
+// Сгенерировано для plaintext.bun
+
+// Основные записи блога
+Table entry {
+  entryid integer [pk, increment]
+  userid integer [ref: > users.userid]  // FK + onDelete
+  subject varchar [not null]
+  summary text
+  summary_p text
+  content text [not null]
+  content_p text [not null]
+  catid integer [ref: > category.catid]
+  
+  // Даты и статус
+  intime integer [not null]
+  updated_at timestamp [default: `now()`]  // Когда редактировали
+  status varchar [default: 'published']    // draft/published/archived
+  
+  // Статистика
+  comments text
+  commentcount integer [default: 0]
+  view_count integer [default: 0]          // Просмотры (опционально)
+  
+  // Медиа и кэш
+  image integer [default: 0]
+  keywordcache varchar
+  urlcache varchar [unique, not null]
+  
+  indexes {
+    (catid, intime) [name: 'idx_entry_cat_date']
+    (intime) [name: 'idx_entry_date']
+    (urlcache) [name: 'idx_entry_url', unique]
+    (userid, intime) [name: 'idx_entry_user']  // Для автора
+    (status, intime) [name: 'idx_entry_status_date']  // Для фильтрации
+  }
+}
+
+// Категории записей
+Table category {
+  catid integer [pk, increment]           // ID категории
+  name varchar [unique, not null]         // Короткое имя (для URL): "blog"
+  fullname varchar [not null]             // Полное название: "Блог"
+  description text                        // Описание категории (опционально)
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    name [name: 'idx_category_name']      // Индекс для быстрого поиска по имени
+  }
+}
+
+// Пользователи (для авторов/комментаторов)
+Table users {
+  userid integer [pk, increment]
+  username varchar [unique, not null]
+  email varchar [unique, not null]
+  website varchar
+  password_hash varchar [not null]      // Хэш пароля (bcrypt/argon2)
+  role varchar [default: 'user']        // 'admin', 'editor', 'user'
+  created_at timestamp [default: `now()`]
+}
+
+// Подписки пользователя
+Table usersubscribe {
+  userid integer [ref: > users.userid]
+  entryid integer [ref: > entry.entryid]
+  
+  indexes {
+    (userid, entryid) [pk, name: 'pk_user_subscribe'] // Составной первичный ключ
+  }
+}
+
+// Избранное пользователя
+Table userfavorite {
+  userid integer [ref: > users.userid]
+  entryid integer [ref: > entry.entryid]
+
+  indexes {
+    (userid, entryid) [pk, name: 'pk_user_favorite'] // Составной первичный ключ
+  }
+}
+
+// Комментарии
+Table comment {
+  commentid integer [pk, increment]
+  entryid integer [ref: > entry.entryid]        // Удаление записи = удаление комментов
+  userid integer [ref: > users.userid, null]    // NULL если комментарий от гостя
+  author_name varchar                           // Имя гостя (если userid is null)
+  content text [not null]
+  created_at timestamp [default: `now()`]
+  is_approved boolean [default: false]          // Модерация комментариев
+  
+  indexes {
+    (entryid, created_at) [name: 'idx_comment_entry_date'] // Для вывода комментов к записи
+  }
+}
+
+// Связь записей и тегов (многие-ко-многим)
+// Даже если используете keywordcache, эта таблица полезна для фильтрации
+Table entry_keyword {
+  entryid integer [ref: > entry.entryid]
+  keyword_id integer [ref: > keywords.keyword_id]
+  
+  indexes {
+    (entryid, keyword_id) [pk, name: 'pk_entry_keyword'] // Составной первичный ключ
+  }
+}
+
+// Словарь ключевых слов (тегов)
+Table keywords {
+  keyword_id integer [pk, increment]
+  word varchar [unique, not null]        // "Блог" (отображаемое)
+  slug varchar [unique, not null]        // "blog" (для URL)
+  description text                       // Описание тега (для SEO)
+}
