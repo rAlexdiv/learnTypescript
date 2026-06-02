@@ -49,15 +49,31 @@ Table category {
   }
 }
 
-// Пользователи (для авторов/комментаторов)
+// Пользователи с ссылкой на роль
 Table users {
   userid integer [pk, increment]
   username varchar [unique, not null]
   email varchar [unique, not null]
   website varchar
-  password_hash varchar [not null]      // Хэш пароля (bcrypt/argon2)
-  role varchar [default: 'user']        // 'admin', 'editor', 'user'
+  password_hash varchar [not null]
+  role_id integer [ref: > user_role.role_id, default: 0, not null]
   created_at timestamp [default: `now()`]
+  
+  indexes {
+    (role_id) [name: 'idx_user_role_id']
+  }
+}
+
+// Справочник ролей
+Table user_role {
+  role_id integer [pk, increment]
+  name varchar [unique, not null]           // 'admin', 'editor', 'user'
+  description text                          // 'Полный доступ', 'Может редактировать'...
+  access_level integer [default: 0]         // Чем больше, тем больше прав (для сравнения >)
+  
+  indexes {
+    (access_level) [name: 'idx_role_level']
+  }
 }
 
 // Подписки пользователя
